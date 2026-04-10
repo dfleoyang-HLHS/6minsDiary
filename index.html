@@ -19,7 +19,7 @@
 
             <div class="input-group">
                 <label for="content">日記內容</label>
-                <textarea id="content" placeholder="我很感謝... 我今天做的善事... 今天經歷的3件好事..." rows="8" required></textarea>
+                <textarea id="content" placeholder="1. 我很感謝...&#10;2. 我要讓今天變得很棒的方法...&#10;3. 今天經歷的3件好事..." rows="8" required></textarea>
             </div>
 
             <button type="submit" id="submitBtn">傳送至雲端儲存</button>
@@ -27,68 +27,72 @@
         
         <div id="statusMessage"></div>
     </div>
+
     <script type="module">
-  // 1. 引入必要的 Firebase 模組
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // 2. 你的 Firebase 配置
-  const firebaseConfig = {
-    apiKey: "AIzaSyCIuY_INw6usMpftq_y62WGcpsPpnwKGgk",
-    authDomain: "sixmins-diary.firebaseapp.com",
-    databaseURL: "https://sixmins-diary-default-rtdb.firebaseio.com", // 請確認這行，RTDB 通常需要這網址
-    projectId: "sixmins-diary",
-    storageBucket: "sixmins-diary.firebasestorage.app",
-    messagingSenderId: "854976818992",
-    appId: "1:854976818992:web:a7564dedc522d36256e2f5",
-    measurementId: "G-76WC8LJT3Y"
-  };
+        // 你的 Firebase 配置 (已修正 databaseURL)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCIuY_INw6usMpftq_y62WGcpsPpnwKGgk",
+            authDomain: "sixmins-diary.firebaseapp.com",
+            projectId: "sixmins-diary",
+            storageBucket: "sixmins-diary.firebasestorage.app",
+            messagingSenderId: "854976818992",
+            appId: "1:854976818992:web:a7564dedc522d36256e2f5",
+            measurementId: "G-76WC8LJT3Y",
+            // 關鍵修正：必須指向 asia-southeast1
+            databaseURL: "https://sixmins-diary-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
 
-  // 3. 初始化 Firebase 與資料庫
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+        // 初始化
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-  // 4. 綁定表單邏輯
-  const diaryForm = document.getElementById('diaryForm');
-  const dateInput = document.getElementById('datetime');
-  const statusMsg = document.getElementById('statusMessage');
+        const diaryForm = document.getElementById('diaryForm');
+        const dateInput = document.getElementById('datetime');
+        const statusMsg = document.getElementById('statusMessage');
 
-  // 設定初始時間
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  dateInput.value = now.toISOString().slice(0, 16);
+        // 自動填入現在時間
+        const updateNow = () => {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            dateInput.value = now.toISOString().slice(0, 16);
+        };
+        updateNow();
 
-  // 提交事件
-  diaryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerText = "正在連線雲端...";
+        // 監聽提交
+        diaryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "正在儲存到新加坡機房...";
 
-    const diaryData = {
-      dateTime: dateInput.value,
-      content: document.getElementById('content').value,
-      createdAt: new Date().toISOString()
-    };
+            const diaryData = {
+                date_time: dateInput.value,
+                content: document.getElementById('content').value,
+                created_at: new Date().toISOString()
+            };
 
-    try {
-      // push 會在 'diaries' 下建立一個唯一的 ID (類似 db.json 的 id)
-      const diaryRef = ref(db, 'diaries');
-      const newEntryRef = push(diaryRef);
-      await set(newEntryRef, diaryData);
+            try {
+                // 在資料庫中建立 'diaries' 資料夾並推入新資料
+                const diaryRef = ref(db, 'diaries');
+                const newEntryRef = push(diaryRef);
+                await set(newEntryRef, diaryData);
 
-      statusMsg.innerHTML = "✅ 魔法已紀錄！資料已同步至 Firebase。";
-      diaryForm.reset();
-      // 重設時間
-      dateInput.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    } catch (error) {
-      console.error(error);
-      statusMsg.innerHTML = "❌ 錯誤：" + error.message;
-    } finally {
-      btn.disabled = false;
-      btn.innerText = "傳送至雲端儲存";
-    }
-  });
-</script>
+                statusMsg.style.color = "#4a7c59";
+                statusMsg.innerHTML = "✅ 魔法已紀錄！請至 Firebase 查看。";
+                diaryForm.reset();
+                updateNow();
+            } catch (error) {
+                console.error(error);
+                statusMsg.style.color = "#d9534f";
+                statusMsg.innerHTML = "❌ 儲存失敗：" + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "傳送至雲端儲存";
+            }
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6分鐘魔法日記本</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>✨ 6分鐘日記實踐</h2>
+        <p class="subtitle">紀錄當下的正向能量</p>
+        
+        <form id="diaryForm">
+            <div class="input-group">
+                <label for="datetime">選擇日期與時間</label>
+                <input type="datetime-local" id="datetime" required>
+            </div>
+
+            <div class="input-group">
+                <label for="content">日記內容</label>
+                <textarea id="content" placeholder="我很感謝... 我今天做的善事... 今天經歷的3件好事..." rows="8" required></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn">傳送至雲端儲存</button>
+        </form>
+        
+        <div id="statusMessage"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

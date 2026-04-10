@@ -27,6 +27,68 @@
         
         <div id="statusMessage"></div>
     </div>
-    <script src="script.js"></script>
+    <script type="module">
+  // 1. 引入必要的 Firebase 模組
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // 2. 你的 Firebase 配置
+  const firebaseConfig = {
+    apiKey: "AIzaSyCIuY_INw6usMpftq_y62WGcpsPpnwKGgk",
+    authDomain: "sixmins-diary.firebaseapp.com",
+    databaseURL: "https://sixmins-diary-default-rtdb.firebaseio.com", // 請確認這行，RTDB 通常需要這網址
+    projectId: "sixmins-diary",
+    storageBucket: "sixmins-diary.firebasestorage.app",
+    messagingSenderId: "854976818992",
+    appId: "1:854976818992:web:a7564dedc522d36256e2f5",
+    measurementId: "G-76WC8LJT3Y"
+  };
+
+  // 3. 初始化 Firebase 與資料庫
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // 4. 綁定表單邏輯
+  const diaryForm = document.getElementById('diaryForm');
+  const dateInput = document.getElementById('datetime');
+  const statusMsg = document.getElementById('statusMessage');
+
+  // 設定初始時間
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  dateInput.value = now.toISOString().slice(0, 16);
+
+  // 提交事件
+  diaryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = "正在連線雲端...";
+
+    const diaryData = {
+      dateTime: dateInput.value,
+      content: document.getElementById('content').value,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      // push 會在 'diaries' 下建立一個唯一的 ID (類似 db.json 的 id)
+      const diaryRef = ref(db, 'diaries');
+      const newEntryRef = push(diaryRef);
+      await set(newEntryRef, diaryData);
+
+      statusMsg.innerHTML = "✅ 魔法已紀錄！資料已同步至 Firebase。";
+      diaryForm.reset();
+      // 重設時間
+      dateInput.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    } catch (error) {
+      console.error(error);
+      statusMsg.innerHTML = "❌ 錯誤：" + error.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "傳送至雲端儲存";
+    }
+  });
+</script>
 </body>
 </html>

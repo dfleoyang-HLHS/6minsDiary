@@ -1,138 +1,214 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, set, get, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { firebaseConfig, uploadMode, apiBaseUrl } from "./firebase-config.js";
+import { initAuth, signIn, signOut, isSignedIn, setAuthChangeCallback } from "./auth.js";
+import { saveDiary, listDiaries, getDriveFolderUrl } from "./drive.js";
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const diaryForm = document.getElementById("diaryForm");
-const dateInput = document.getElementById("datetime");
-const statusMsg = document.getElementById("statusMessage");
-const diaryList = document.getElementById("diaryList");
-const submitBtn = document.getElementById("submitBtn");
-
-function updateNow() {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    dateInput.value = now.toISOString().slice(0, 16);
-}
-
-function buildDiaryEntry() {
-    return {
-        date_time: dateInput.value,
-        content: document.getElementById("content").value,
-        created_at: new Date().toISOString()
-    };
-}
-
-async function uploadViaFirebase(diaryData) {
-    const diaryRef = ref(db, "diaries");
-    const newEntryRef = push(diaryRef);
-    await set(newEntryRef, diaryData);
-    return { id: newEntryRef.key, ...diaryData };
-}
-
-async function uploadViaApi(diaryData) {
-    const response = await fetch(`${apiBaseUrl}/api/diaries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(diaryData)
-    });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${response.status}`);
+const PROMPTS = [
+    {
+        id: "gratitude",
+        number: "①",
+        title: "感恩",
+        hint: "寫下 3 件你今天感謝的事",
+        placeholder: "例：感謝家人的陪伴、感謝好天氣、感謝完成了一項工作..."
+    },
+    {
+        id: "great_day",
+        number: "②",
+        title: "讓今天更棒",
+        hint: "今天可以怎麼做，讓這一天變得更好？",
+        placeholder: "例：提早 10 分鐘出門、專心完成最重要的一件事..."
+    },
+    {
+        id: "affirmation",
+        number: "③",
+        title: "正向肯定",
+        hint: "寫下對自己的正向肯定或今天的好事",
+        placeholder: "例：我很有耐心、今天順利完成了會議、學到了新東西..."
     }
-    return response.json();
+];
+
+const els = {
+    loginScreen: document.getElementById("loginScreen"),
+    mainApp: document.getElementById("mainApp"),
+    signInBtn: document.getElementById("signInBtn"),
+    signOutBtn: document.getElementById("signOutBtn"),
+    userInfo: document.getElementById("userInfo"),
+    driveLink: document.getElementById("driveLink"),
+    diaryForm: document.getElementById("diaryForm"),
+    diaryDate: document.getElementById("diaryDate"),
+    submitBtn: document.getElementById("submitBtn"),
+    loginStatus: document.getElementById("loginStatus"),
+    statusMessage: document.getElementById("statusMessage"),
+    diaryList: document.getElementById("diaryList"),
+    promptFields: document.getElementById("promptFields")
+};
+
+function todayString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
 }
 
-async function fetchDiaries() {
-    if (uploadMode === "api") {
-        const response = await fetch(`${apiBaseUrl}/api/diaries`);
-        if (!response.ok) throw new Error("無法載入日記");
-        return response.json();
-    }
-
-    const diariesRef = ref(db, "diaries");
-    const snapshot = await get(query(diariesRef, orderByChild("created_at"), limitToLast(20)));
-    if (!snapshot.exists()) return [];
-
-    const entries = [];
-    snapshot.forEach((child) => {
-        entries.push({ id: child.key, ...child.val() });
-    });
-    return entries.reverse();
+function renderPromptFields() {
+    els.promptFields.innerHTML = PROMPTS.map(
+        (p) => `
+        <div class="prompt-card">
+            <label for="${p.id}">
+                <span class="prompt-number">${p.number}</span>
+                <span class="prompt-title">${p.title}</span>
+                <span class="prompt-hint">${p.hint}</span>
+            </label>
+            <textarea id="${p.id}" name="${p.id}" rows="3" required
+                placeholder="${p.placeholder}"></textarea>
+        </div>`
+    ).join("");
 }
 
-function formatDateTime(value) {
-    if (!value) return "";
-    const d = new Date(value);
-    return d.toLocaleString("zh-TW", { dateStyle: "medium", timeStyle: "short" });
+function showStatus(msg, type = "success", target = "main") {
+    const el = target === "login" ? els.loginStatus : els.statusMessage;
+    if (!el) return;
+    el.className = `status-message status-${type}`;
+    el.textContent = msg;
+}
+
+function clearStatus(target = "main") {
+    const el = target === "login" ? els.loginStatus : els.statusMessage;
+    if (!el) return;
+    el.className = "status-message";
+    el.textContent = "";
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text || "";
+    return div.innerHTML.replace(/\n/g, "<br>");
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    return `${y} 年 ${parseInt(m, 10)} 月 ${parseInt(d, 10)} 日`;
 }
 
 function renderDiaryList(diaries) {
     if (!diaries.length) {
-        diaryList.innerHTML = '<p class="empty-hint">尚無日記紀錄</p>';
+        els.diaryList.innerHTML = '<p class="empty-hint">尚無日記，寫下今天的第一篇吧！</p>';
         return;
     }
 
-    diaryList.innerHTML = diaries
+    els.diaryList.innerHTML = diaries
         .map(
             (entry) => `
         <article class="diary-card">
-            <time>${formatDateTime(entry.date_time || entry.timestamp)}</time>
-            <p>${escapeHtml(entry.content)}</p>
+            <header class="diary-card-header">
+                <time>${formatDate(entry.date)}</time>
+            </header>
+            <div class="diary-section">
+                <strong>① 感恩</strong>
+                <p>${escapeHtml(entry.gratitude)}</p>
+            </div>
+            <div class="diary-section">
+                <strong>② 讓今天更棒</strong>
+                <p>${escapeHtml(entry.great_day)}</p>
+            </div>
+            <div class="diary-section">
+                <strong>③ 正向肯定</strong>
+                <p>${escapeHtml(entry.affirmation)}</p>
+            </div>
         </article>`
         )
         .join("");
 }
 
-function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, "<br>");
-}
-
-function showStatus(message, isError = false) {
-    statusMsg.style.color = isError ? "#d9534f" : "#4a7c59";
-    statusMsg.innerHTML = message;
-}
-
 async function loadDiaries() {
+    els.diaryList.innerHTML = '<p class="empty-hint">載入中...</p>';
     try {
-        const diaries = await fetchDiaries();
+        const diaries = await listDiaries();
         renderDiaryList(diaries);
-    } catch (error) {
-        console.error("載入日記失敗:", error);
-        diaryList.innerHTML = '<p class="empty-hint">無法載入日記紀錄</p>';
+        els.driveLink.href = getDriveFolderUrl();
+        els.driveLink.style.display = "inline";
+    } catch (err) {
+        console.error(err);
+        els.diaryList.innerHTML = `<p class="empty-hint">無法載入日記：${err.message}</p>`;
     }
 }
 
-diaryForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    submitBtn.disabled = true;
-    submitBtn.innerText = uploadMode === "api" ? "正在透過 API 儲存..." : "正在儲存到 Google 雲端...";
+function buildDiaryData() {
+    return {
+        date: els.diaryDate.value,
+        gratitude: document.getElementById("gratitude").value.trim(),
+        great_day: document.getElementById("great_day").value.trim(),
+        affirmation: document.getElementById("affirmation").value.trim(),
+        updated_at: new Date().toISOString()
+    };
+}
 
-    const diaryData = buildDiaryEntry();
+function showMainApp(show) {
+    els.loginScreen.hidden = show;
+    els.mainApp.hidden = !show;
+}
+
+function updateUI(signedIn) {
+    showMainApp(signedIn);
+    if (signedIn) {
+        els.userInfo.textContent = "已連結個人 Google 雲端";
+        loadDiaries();
+    }
+}
+
+async function handleSubmit(e) {
+    e.preventDefault();
+    clearStatus();
+    els.submitBtn.disabled = true;
+    els.submitBtn.textContent = "上傳至 Google 雲端...";
 
     try {
-        if (uploadMode === "api") {
-            await uploadViaApi(diaryData);
-        } else {
-            await uploadViaFirebase(diaryData);
-        }
-
-        showStatus("✅ 魔法已紀錄！資料已上傳至 Google 雲端資料庫。");
-        diaryForm.reset();
-        updateNow();
+        const data = buildDiaryData();
+        const result = await saveDiary(data);
+        const action = result.updated ? "更新" : "新增";
+        showStatus(`✅ 日記已${action}！檔案：6minsdiaries/${result.fileName}`);
+        els.driveLink.href = getDriveFolderUrl();
         await loadDiaries();
-    } catch (error) {
-        console.error(error);
-        showStatus("❌ 儲存失敗：" + error.message, true);
+    } catch (err) {
+        console.error(err);
+        showStatus(`❌ 上傳失敗：${err.message}`, "error");
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "傳送至雲端儲存";
+        els.submitBtn.disabled = false;
+        els.submitBtn.textContent = "儲存至我的 Google 雲端";
     }
-});
+}
 
-updateNow();
-loadDiaries();
+async function bootstrap() {
+    renderPromptFields();
+    els.diaryDate.value = todayString();
+    els.diaryDate.max = todayString();
+
+    setAuthChangeCallback(updateUI);
+
+    els.signInBtn.addEventListener("click", async () => {
+        els.signInBtn.disabled = true;
+        try {
+            await signIn();
+        } catch (err) {
+            showStatus(`❌ 登入失敗：${err.message}`, "error", "login");
+            showMainApp(false);
+        } finally {
+            els.signInBtn.disabled = false;
+        }
+    });
+
+    els.signOutBtn.addEventListener("click", () => {
+        signOut();
+        clearStatus();
+        showMainApp(false);
+    });
+
+    els.diaryForm.addEventListener("submit", handleSubmit);
+
+    const ready = await initAuth();
+    if (!ready) {
+        showStatus("❌ 無法載入 Google 登入服務，請檢查網路連線", "error", "login");
+    }
+}
+
+bootstrap();

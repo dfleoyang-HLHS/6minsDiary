@@ -1,0 +1,11 @@
+{
+  "name": "sixmins-diary",
+  "version": "2.0.0",
+  "description": "6分鐘魔法日記本 - Google Cloud Firebase 資料庫整合版",
+  "scripts": {
+    "serve": "npx --yes serve . -p 8080",
+    "server:install": "cd server && npm install",
+    "server:start": "cd server && npm start",
+    "server:dev": "cd server && npm run dev"
+  }
+}

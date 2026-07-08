@@ -1,13 +1,14 @@
 /**
  * 6分鐘魔法日記本 — Google Apps Script 後端
- * 以「存取網頁的使用者」身分，將日記寫入該使用者的 Google 雲端硬碟
+ * 版本 2.1 — 不使用 getFoldersByName，僅需 drive.file 權限
  */
 
+var SCRIPT_VERSION = "2.1";
 var DIARY_FOLDER_NAME = "6minsdiaries";
+var FOLDER_ID_KEY = "diaryFolderId";
 
 /**
  * 提供網頁 UI
- * 需要專案中有名為「index」的 HTML 檔案（見 gas/index.html）
  */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile("index")
@@ -16,22 +17,26 @@ function doGet() {
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
-var DIARY_FOLDER_NAME = "6minsdiaries";
-var FOLDER_ID_KEY = "diaryFolderId";
+/**
+ * 回傳版本號（用於確認是否已部署新版）
+ */
+function getScriptVersion() {
+  return SCRIPT_VERSION;
+}
 
 /**
- * 部署前測試：確認 index 檔案與 Drive 權限
+ * 部署前測試：在編輯器選此函式 → 執行
  */
 function testDeployment() {
   HtmlService.createHtmlOutputFromFile("index");
   var folderId = getOrCreateDiaryFolder();
-  Logger.log("✅ index 檔案存在，可以部署");
+  Logger.log("版本：" + SCRIPT_VERSION);
+  Logger.log("✅ index 檔案存在");
   Logger.log("✅ Drive 權限正常，資料夾 ID：" + folderId);
 }
 
 /**
  * 取得或建立 6minsdiaries 資料夾
- * 使用 UserProperties 記錄資料夾 ID，僅需 drive.file 權限（不需搜尋整個雲端硬碟）
  */
 function getOrCreateDiaryFolder() {
   var userProps = PropertiesService.getUserProperties();
@@ -52,7 +57,7 @@ function getOrCreateDiaryFolder() {
 }
 
 /**
- * 儲存日記（每日一篇，同日期覆蓋更新）
+ * 儲存日記
  */
 function saveDiary(diaryData) {
   if (!diaryData || !diaryData.date) {
@@ -150,7 +155,9 @@ function getUserInfo() {
     } catch (e2) {
     }
   }
+
   return {
+    version: SCRIPT_VERSION,
     email: email,
     folderName: DIARY_FOLDER_NAME,
     driveUrl: getDriveFolderUrl()

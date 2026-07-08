@@ -146,17 +146,43 @@
 ## 錯誤：You do not have permission to call DriveApp
 
 完整訊息類似：
-`You do not have permission to call DriveApp.getFoldersByName. Required permissions: drive`
+`You do not have permission to call DriveApp.getFoldersByName`
 
-### 原因
+### ⚠️ 若錯誤包含 `getFoldersByName`，代表仍在跑舊版程式！
 
-網頁應用程式尚未取得 **Google 雲端硬碟授權**，常見情況：
+**請在 Apps Script 的 Code.gs 按 Ctrl+F 搜尋 `getFoldersByName`：**
 
-1. 部署時未完成「允許」授權
-2. 更新程式後未重新授權
-3. 舊版授權範圍不足
+| 搜尋結果 | 代表 |
+|----------|------|
+| **有找到** | 仍是舊版，必須整份替換 Code.gs |
+| **找不到** | 已是新版，請重新部署並清除舊授權 |
 
-### 解法（請依序操作）
+### 強制更新步驟（請逐步執行）
+
+1. 開啟 Apps Script 的 `Code.gs`
+2. **全選刪除**（Ctrl+A → Delete）
+3. 從本 repo 複製 **整份** `gas/Code.gs` 貼上
+4. 確認第 6 行有 `var SCRIPT_VERSION = "2.1";`
+5. 確認搜尋 `getFoldersByName` → **0 筆結果**
+6. **儲存**（Ctrl+S）
+7. 執行 `testDeployment` → 授權 → 日誌應顯示 `版本：2.1`
+8. **部署** → **管理部署作業** → 編輯 → **版本：新版本** → **部署**
+9. [移除舊授權](https://myaccount.google.com/permissions) → 重新開啟網址 → 再授權
+
+### 成功標誌
+
+- 網頁頁尾顯示 **版本 2.1**
+- 不再出現 `getFoldersByName` 錯誤
+- 可正常寫入日記
+
+### 原因（技術說明）
+
+舊版用 `DriveApp.getFoldersByName()` 搜尋整個雲端硬碟，需要完整 drive 權限。
+新版 v2.1 改為 `DriveApp.createFolder()` + 記錄資料夾 ID，只需 drive.file 權限。
+
+若只更新了 `appsscript.json` 但 Code.gs 仍是舊版，授權後仍會失敗。
+
+### 其他原因
 
 #### A. 開發者（你）在 Apps Script 編輯器
 

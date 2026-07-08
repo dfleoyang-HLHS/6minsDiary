@@ -16,23 +16,39 @@ function doGet() {
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
+var DIARY_FOLDER_NAME = "6minsdiaries";
+var FOLDER_ID_KEY = "diaryFolderId";
+
 /**
- * 部署前測試：在編輯器選此函式 → 執行，確認 index 檔案存在
+ * 部署前測試：確認 index 檔案與 Drive 權限
  */
 function testDeployment() {
   HtmlService.createHtmlOutputFromFile("index");
+  var folderId = getOrCreateDiaryFolder();
   Logger.log("✅ index 檔案存在，可以部署");
+  Logger.log("✅ Drive 權限正常，資料夾 ID：" + folderId);
 }
 
 /**
  * 取得或建立 6minsdiaries 資料夾
+ * 使用 UserProperties 記錄資料夾 ID，僅需 drive.file 權限（不需搜尋整個雲端硬碟）
  */
 function getOrCreateDiaryFolder() {
-  var folders = DriveApp.getFoldersByName(DIARY_FOLDER_NAME);
-  if (folders.hasNext()) {
-    return folders.next().getId();
+  var userProps = PropertiesService.getUserProperties();
+  var savedId = userProps.getProperty(FOLDER_ID_KEY);
+
+  if (savedId) {
+    try {
+      DriveApp.getFolderById(savedId).getName();
+      return savedId;
+    } catch (e) {
+      userProps.deleteProperty(FOLDER_ID_KEY);
+    }
   }
-  return DriveApp.createFolder(DIARY_FOLDER_NAME).getId();
+
+  var folder = DriveApp.createFolder(DIARY_FOLDER_NAME);
+  userProps.setProperty(FOLDER_ID_KEY, folder.getId());
+  return folder.getId();
 }
 
 /**

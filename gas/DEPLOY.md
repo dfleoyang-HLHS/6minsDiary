@@ -23,6 +23,12 @@
 3. 將本 repo 的 `gas/Code.gs` **完整內容**貼上
 4. 確認檔名為 `Code.gs`（預設即是）
 
+**（建議）啟用 manifest 檔案以設定權限：**
+
+1. 點左側 **專案設定**（齒輪圖示）
+2. 勾選 **在編輯器中顯示 appsscript.json 資訊清單檔案**
+3. 左側會出現 `appsscript.json`，貼上 repo 中 `gas/appsscript.json` 的內容（含 `oauthScopes` 雲端硬碟權限）
+
 ### 步驟 2：建立 index HTML 檔（最容易漏掉）
 
 1. 點左側 **+**（新增檔案）
@@ -134,3 +140,51 @@
 5. 點 **部署**
 
 否則網址雖然能開，但會跑舊版程式。
+
+---
+
+## 錯誤：You do not have permission to call DriveApp
+
+完整訊息類似：
+`You do not have permission to call DriveApp.getFoldersByName. Required permissions: drive`
+
+### 原因
+
+網頁應用程式尚未取得 **Google 雲端硬碟授權**，常見情況：
+
+1. 部署時未完成「允許」授權
+2. 更新程式後未重新授權
+3. 舊版授權範圍不足
+
+### 解法（請依序操作）
+
+#### A. 開發者（你）在 Apps Script 編輯器
+
+1. 將最新的 `Code.gs` 和 `appsscript.json` 內容貼上（新版已修正權限問題）
+2. **儲存**所有檔案
+3. 函式選單選 **`testDeployment`** → 點 **執行**
+4. 若要求授權 → **檢閱權限** → **進階** → **前往...** → **允許**
+5. 日誌應顯示：
+   ```
+   ✅ index 檔案存在，可以部署
+   ✅ Drive 權限正常，資料夾 ID：xxxxx
+   ```
+6. **部署** → **管理部署作業** → 編輯 → **版本：新版本** → **部署**
+
+#### B. 使用者（或你自己測試網址時）
+
+1. 前往 [Google 帳戶權限](https://myaccount.google.com/permissions)
+2. 找到此日記應用程式 → **移除存取權**
+3. 重新開啟部署的網頁 URL
+4. 完整走完授權流程 → **允許**
+5. 重新整理頁面
+
+### 授權說明（會看到什麼）
+
+新版只要求 **drive.file** 權限，意思是：
+
+> 僅能存取此應用程式建立或開啟的 Google 雲端硬碟檔案
+
+不會讀取你雲端硬碟的其他檔案，比完整 drive 權限更安全。
+
+---

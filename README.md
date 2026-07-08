@@ -1,18 +1,18 @@
 # 6分鐘魔法日記本
 
-每天 6 分鐘，透過三個方向記錄正向能量，並儲存至**你個人 Google 帳號**的雲端硬碟。
+每天 6 分鐘，透過三個方向記錄正向能量，並儲存至**使用者個人 Google 雲端硬碟**的 `6minsdiaries` 資料夾。
+
+採用 **Google Apps Script** 部署，**不需要 Google Cloud Console、不需要綁定信用卡**。
 
 ## 功能特色
 
 - **三個日記方向**：感恩、讓今天更棒、正向肯定
-- **個人 Google 帳號登入**：OAuth 2.0 安全授權
+- **個人 Google 帳號**：開啟網頁即以自己的帳號授權
 - **雲端儲存位置**：你的 Google 雲端硬碟 → `6minsdiaries` 資料夾
 - **每日一篇**：同日期再次儲存會更新當日檔案（`YYYY-MM-DD.json`）
 - **跨瀏覽器支援**：Chrome、Firefox、Safari、Edge 等現代瀏覽器
 
 ## 資料儲存位置
-
-登入並寫日記後，資料會存在：
 
 ```
 你的 Google 雲端硬碟
@@ -22,102 +22,75 @@
     └── ...
 ```
 
-每個 JSON 檔案包含：
+## 部署步驟（開發者，只需一般 Gmail）
 
-```json
-{
-  "date": "2026-07-08",
-  "gratitude": "感恩內容...",
-  "great_day": "讓今天更棒的行動...",
-  "affirmation": "正向肯定...",
-  "updated_at": "2026-07-08T01:00:00.000Z"
-}
-```
+### 方法一：手動部署（最簡單）
 
-可在網頁點擊「開啟 6minsdiaries 資料夾」直接前往 Google Drive 查看。
+1. 前往 [script.google.com](https://script.google.com/) 並登入你的 Google 帳號
+2. 點 **新增專案**
+3. 將本 repo `gas/` 資料夾內的三個檔案內容分別貼入：
+   - `Code.gs` → 程式碼編輯器（刪除預設的 `myFunction`）
+   - 點 **+** → **HTML** → 命名 `index` → 貼上 `index.html` 內容
+   - 再新增 HTML 檔案 `styles` → 貼上 `styles.html` 內容
+4. 點 **部署** → **新增部署作業**
+5. 類型選 **網頁應用程式**，設定如下：
 
-## 設定步驟
+| 項目 | 設定值 |
+|------|--------|
+| 執行身分 | **存取網頁應用程式的使用者** |
+| 誰可以存取 | **所有人**（或「所有已登入 Google 帳戶的使用者」） |
 
-### 1. 建立 Google Cloud 專案
+6. 點 **部署**，完成授權（允許存取 Google 雲端硬碟）
+7. 複製 **網頁應用程式 URL**，分享給使用者
 
-1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
-2. 建立新專案（或選擇現有專案）
-3. 啟用 **Google Drive API**：
-   - APIs & Services → Library → 搜尋「Google Drive API」→ Enable
+> **重要**：「執行身分」必須選「存取網頁應用程式的使用者」，日記才會存入**各使用者自己**的雲端硬碟。
 
-### 2. 建立 OAuth 用戶端 ID
-
-1. APIs & Services → **Credentials** → Create Credentials → **OAuth client ID**
-2. 應用程式類型選 **Web application**
-3. **Authorized JavaScript origins** 加入你的網域，例如：
-   - `http://localhost:8080`（本機測試）
-   - `https://yourname.github.io`（GitHub Pages）
-4. 複製產生的 **Client ID**
-
-### 3. 設定 OAuth 同意畫面
-
-1. APIs & Services → **OAuth consent screen**
-2. 使用者類型選 **External**（或 Internal 若為組織內部使用）
-3. 填寫應用程式名稱、支援電子郵件
-4. 在 Scopes 加入：`https://www.googleapis.com/auth/drive.file`
-5. 測試階段需將你的 Gmail 加入 **Test users**
-
-### 4. 設定專案
+### 方法二：使用 clasp 指令部署
 
 ```bash
-cp js/config.example.js js/config.js
+npm install -g @google/clasp
+clasp login
+clasp create --type webapp --title "6分鐘魔法日記本"
+# 將產生的 scriptId 填入 .clasp.json
+cp .clasp.json.example .clasp.json
+clasp push
+clasp deploy --description "v1"
 ```
 
-編輯 `js/config.js`，填入你的 Client ID：
+## 使用者如何使用
 
-```js
-export const GOOGLE_CLIENT_ID = "123456789-xxxx.apps.googleusercontent.com";
-export const DIARY_FOLDER_NAME = "6minsdiaries";
-```
-
-### 5. 本機測試
-
-```bash
-npm run serve
-# 開啟 http://localhost:8080
-```
-
-### 6. 部署至 GitHub Pages
-
-1. 推送程式碼至 GitHub
-2. Settings → Pages → Source 選 main 分支
-3. 確認 OAuth 的 JavaScript origins 已包含 `https://yourname.github.io`
+1. 開啟開發者提供的 **網頁應用程式 URL**
+2. 第一次使用時，Google 會要求授權（允許此應用管理你在 `6minsdiaries` 建立的檔案）
+3. 選擇日期，填寫三個方向的日記
+4. 點 **儲存至我的 Google 雲端**
+5. 可點 **開啟 6minsdiaries 資料夾** 在 Google Drive 中查看
 
 ## 專案結構
 
 ```
-├── index.html           # 主頁面
-├── style.css            # 樣式（跨瀏覽器）
-├── js/
-│   ├── config.js        # OAuth Client ID 設定
-│   ├── config.example.js
-│   ├── auth.js          # Google 帳號登入/登出
-│   ├── drive.js         # Google Drive 讀寫
-│   └── app.js           # 主程式邏輯
-└── package.json
+├── gas/
+│   ├── appsscript.json   # Apps Script 專案設定
+│   ├── Code.gs           # 後端：Drive 讀寫邏輯
+│   ├── index.html        # 前端 UI
+│   └── styles.html       # 樣式
+├── index.html            # GitHub 說明頁
+└── README.md
 ```
 
-## 隱私與權限
+## 與其他方案的差異
 
-- 本應用使用 `drive.file` 權限，**只能存取此應用建立的檔案**（6minsdiaries 資料夾內的日記）
-- 無法讀取你 Google 雲端硬碟的其他檔案
-- 日記資料儲存在你自己的 Google 帳號下，開發者無法存取
+| 項目 | Apps Script（本方案） | Google Cloud OAuth |
+|------|----------------------|-------------------|
+| 需要信用卡 | ❌ 不需要 | ⚠️ 可能需要 |
+| 需要 GCP Console | ❌ 不需要 | ✅ 需要 |
+| 儲存位置 | 個人 Google 雲端硬碟 | 個人 Google 雲端硬碟 |
+| 部署網址 | script.google.com | 自訂網域 / GitHub Pages |
 
-## 瀏覽器支援
+## 隱私說明
 
-| 瀏覽器 | 最低版本 |
-|--------|----------|
-| Chrome | 80+ |
-| Firefox | 78+ |
-| Safari | 14+ |
-| Edge | 80+ |
-
-需啟用 JavaScript 與 Cookie（用於 Google 登入）。
+- 程式以**使用者自己的 Google 帳號**執行，日記只存在該使用者的雲端硬碟
+- 開發者無法讀取使用者的日記內容
+- 授權範圍僅限 Apps Script 建立的 `6minsdiaries` 資料夾內檔案
 
 ## 授權
 

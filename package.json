@@ -1,8 +1,6 @@
 {
   "name": "sixmins-diary",
-  "version": "3.0.0",
-  "description": "6分鐘魔法日記本 — 個人 Google 雲端硬碟整合版",
-  "scripts": {
-    "serve": "npx --yes serve . -p 8080"
-  }
+  "version": "4.0.0",
+  "description": "6分鐘魔法日記本 — Google Apps Script 版",
+  "private": true
 }

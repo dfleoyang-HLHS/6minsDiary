@@ -1,41 +1,63 @@
 /**
  * 6分鐘魔法日記本 — Google Apps Script 後端
- * 以「存取網頁的使用者」身分，將日記寫入該使用者的 Google 雲端硬碟
+ * 版本 2.1 — 不使用 getFoldersByName，僅需 drive.file 權限
  */
 
+var SCRIPT_VERSION = "2.1";
 var DIARY_FOLDER_NAME = "6minsdiaries";
+var FOLDER_ID_KEY = "diaryFolderId";
 
 /**
  * 提供網頁 UI
  */
 function doGet() {
-  return HtmlService.createTemplateFromFile("index")
-    .evaluate()
+  return HtmlService.createHtmlOutputFromFile("index")
     .setTitle("6分鐘魔法日記本")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 /**
- * 引入 HTML 片段（樣式、腳本）
+ * 回傳版本號（用於確認是否已部署新版）
  */
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+function getScriptVersion() {
+  return SCRIPT_VERSION;
+}
+
+/**
+ * 部署前測試：在編輯器選此函式 → 執行
+ */
+function testDeployment() {
+  HtmlService.createHtmlOutputFromFile("index");
+  var folderId = getOrCreateDiaryFolder();
+  Logger.log("版本：" + SCRIPT_VERSION);
+  Logger.log("✅ index 檔案存在");
+  Logger.log("✅ Drive 權限正常，資料夾 ID：" + folderId);
 }
 
 /**
  * 取得或建立 6minsdiaries 資料夾
  */
 function getOrCreateDiaryFolder() {
-  var folders = DriveApp.getFoldersByName(DIARY_FOLDER_NAME);
-  if (folders.hasNext()) {
-    return folders.next().getId();
+  var userProps = PropertiesService.getUserProperties();
+  var savedId = userProps.getProperty(FOLDER_ID_KEY);
+
+  if (savedId) {
+    try {
+      DriveApp.getFolderById(savedId).getName();
+      return savedId;
+    } catch (e) {
+      userProps.deleteProperty(FOLDER_ID_KEY);
+    }
   }
-  return DriveApp.createFolder(DIARY_FOLDER_NAME).getId();
+
+  var folder = DriveApp.createFolder(DIARY_FOLDER_NAME);
+  userProps.setProperty(FOLDER_ID_KEY, folder.getId());
+  return folder.getId();
 }
 
 /**
- * 儲存日記（每日一篇，同日期覆蓋更新）
+ * 儲存日記
  */
 function saveDiary(diaryData) {
   if (!diaryData || !diaryData.date) {
@@ -133,7 +155,9 @@ function getUserInfo() {
     } catch (e2) {
     }
   }
+
   return {
+    version: SCRIPT_VERSION,
     email: email,
     folderName: DIARY_FOLDER_NAME,
     driveUrl: getDriveFolderUrl()

@@ -26,13 +26,22 @@
 
 ### 方法一：手動部署（最簡單）
 
+> **詳細圖解步驟與錯誤排除請見 [gas/DEPLOY.md](gas/DEPLOY.md)**
+
 1. 前往 [script.google.com](https://script.google.com/) 並登入你的 Google 帳號
 2. 點 **新增專案**
-3. 將本 repo `gas/` 資料夾內的三個檔案內容分別貼入：
-   - `Code.gs` → 程式碼編輯器（刪除預設的 `myFunction`）
-   - 點 **+** → **HTML** → 命名 `index` → 貼上 `index.html` 內容
-   - 再新增 HTML 檔案 `styles` → 貼上 `styles.html` 內容
-4. 點 **部署** → **新增部署作業**
+3. 建立 **兩個檔案**（缺一不可）：
+
+| 檔案 | 如何建立 | 內容來源 |
+|------|----------|----------|
+| `Code.gs` | 預設已有，貼上覆蓋 | `gas/Code.gs` |
+| `index` | 點 **+** → **HTML** → 檔名輸入 **`index`** | `gas/index.html` |
+
+⚠️ **常見錯誤**：若只貼了 `Code.gs` 而沒建立 `index` HTML 檔，部署時會出現：
+`Exception: No HTML file named index was found`
+
+4. 儲存後，可先執行 `testDeployment` 函式確認 index 檔案存在
+5. 點 **部署** → **新增部署作業**
 5. 類型選 **網頁應用程式**，設定如下：
 
 | 項目 | 設定值 |
@@ -71,8 +80,8 @@ clasp deploy --description "v1"
 ├── gas/
 │   ├── appsscript.json   # Apps Script 專案設定
 │   ├── Code.gs           # 後端：Drive 讀寫邏輯
-│   ├── index.html        # 前端 UI
-│   └── styles.html       # 樣式
+│   ├── index.html        # 前端 UI（貼到 Apps Script 時命名為 index）
+│   └── DEPLOY.md         # 部署指南與錯誤排除
 ├── index.html            # GitHub 說明頁
 └── README.md
 ```

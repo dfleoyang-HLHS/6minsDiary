@@ -1,126 +1,123 @@
 # 6分鐘魔法日記本
 
-紀錄當下正向能量的日記應用，支援將資料寫入 **Google Cloud Firebase Realtime Database**。
+每天 6 分鐘，透過三個方向記錄正向能量，並儲存至**你個人 Google 帳號**的雲端硬碟。
 
-## 功能
+## 功能特色
 
-- 填寫日期時間與日記內容
-- 一鍵上傳至 Google 雲端資料庫
-- 顯示近期日記紀錄
-- 兩種上傳模式：
-  - **firebase**（預設）：前端直接寫入 Firebase RTDB
-  - **api**：透過 Node.js 後端 API 寫入（適合需要伺服器端驗證的場景）
+- **三個日記方向**：感恩、讓今天更棒、正向肯定
+- **個人 Google 帳號登入**：OAuth 2.0 安全授權
+- **雲端儲存位置**：你的 Google 雲端硬碟 → `6minsdiaries` 資料夾
+- **每日一篇**：同日期再次儲存會更新當日檔案（`YYYY-MM-DD.json`）
+- **跨瀏覽器支援**：Chrome、Firefox、Safari、Edge 等現代瀏覽器
+
+## 資料儲存位置
+
+登入並寫日記後，資料會存在：
+
+```
+你的 Google 雲端硬碟
+└── 6minsdiaries/          ← 自動建立
+    ├── 2026-07-08.json
+    ├── 2026-07-07.json
+    └── ...
+```
+
+每個 JSON 檔案包含：
+
+```json
+{
+  "date": "2026-07-08",
+  "gratitude": "感恩內容...",
+  "great_day": "讓今天更棒的行動...",
+  "affirmation": "正向肯定...",
+  "updated_at": "2026-07-08T01:00:00.000Z"
+}
+```
+
+可在網頁點擊「開啟 6minsdiaries 資料夾」直接前往 Google Drive 查看。
+
+## 設定步驟
+
+### 1. 建立 Google Cloud 專案
+
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/)
+2. 建立新專案（或選擇現有專案）
+3. 啟用 **Google Drive API**：
+   - APIs & Services → Library → 搜尋「Google Drive API」→ Enable
+
+### 2. 建立 OAuth 用戶端 ID
+
+1. APIs & Services → **Credentials** → Create Credentials → **OAuth client ID**
+2. 應用程式類型選 **Web application**
+3. **Authorized JavaScript origins** 加入你的網域，例如：
+   - `http://localhost:8080`（本機測試）
+   - `https://yourname.github.io`（GitHub Pages）
+4. 複製產生的 **Client ID**
+
+### 3. 設定 OAuth 同意畫面
+
+1. APIs & Services → **OAuth consent screen**
+2. 使用者類型選 **External**（或 Internal 若為組織內部使用）
+3. 填寫應用程式名稱、支援電子郵件
+4. 在 Scopes 加入：`https://www.googleapis.com/auth/drive.file`
+5. 測試階段需將你的 Gmail 加入 **Test users**
+
+### 4. 設定專案
+
+```bash
+cp js/config.example.js js/config.js
+```
+
+編輯 `js/config.js`，填入你的 Client ID：
+
+```js
+export const GOOGLE_CLIENT_ID = "123456789-xxxx.apps.googleusercontent.com";
+export const DIARY_FOLDER_NAME = "6minsdiaries";
+```
+
+### 5. 本機測試
+
+```bash
+npm run serve
+# 開啟 http://localhost:8080
+```
+
+### 6. 部署至 GitHub Pages
+
+1. 推送程式碼至 GitHub
+2. Settings → Pages → Source 選 main 分支
+3. 確認 OAuth 的 JavaScript origins 已包含 `https://yourname.github.io`
 
 ## 專案結構
 
 ```
-├── index.html              # 主頁面
-├── style.css               # 樣式
+├── index.html           # 主頁面
+├── style.css            # 樣式（跨瀏覽器）
 ├── js/
-│   ├── app.js              # 前端邏輯（上傳、讀取日記）
-│   ├── firebase-config.js  # Firebase 設定
-│   └── firebase-config.example.js
-├── server/
-│   ├── index.js            # Express API 後端
-│   └── package.json
-├── db.json                 # 本機測試用範例資料
+│   ├── config.js        # OAuth Client ID 設定
+│   ├── config.example.js
+│   ├── auth.js          # Google 帳號登入/登出
+│   ├── drive.js         # Google Drive 讀寫
+│   └── app.js           # 主程式邏輯
 └── package.json
 ```
 
-## 快速開始（前端直連 Firebase）
+## 隱私與權限
 
-1. 確認 `js/firebase-config.js` 已填入你的 Firebase 專案設定
-2. 在 Firebase Console 啟用 **Realtime Database**（區域建議：asia-southeast1）
-3. 設定資料庫規則（開發測試用）：
+- 本應用使用 `drive.file` 權限，**只能存取此應用建立的檔案**（6minsdiaries 資料夾內的日記）
+- 無法讀取你 Google 雲端硬碟的其他檔案
+- 日記資料儲存在你自己的 Google 帳號下，開發者無法存取
 
-```json
-{
-  "rules": {
-    "diaries": {
-      ".read": true,
-      ".write": true
-    }
-  }
-}
-```
+## 瀏覽器支援
 
-4. 啟動靜態伺服器：
+| 瀏覽器 | 最低版本 |
+|--------|----------|
+| Chrome | 80+ |
+| Firefox | 78+ |
+| Safari | 14+ |
+| Edge | 80+ |
 
-```bash
-npm run serve
-```
-
-5. 開啟 http://localhost:8080
-
-## 後端 API 模式
-
-適合需要服務帳戶認證、或未來擴充驗證邏輯時使用。
-
-### 設定步驟
-
-1. 在 [Firebase Console](https://console.firebase.google.com/) > 專案設定 > 服務帳戶，產生新的私密金鑰
-2. 將 JSON 檔存為 `serviceAccountKey.json`（已加入 .gitignore）
-3. 複製環境變數範本：
-
-```bash
-cp .env.example .env
-```
-
-4. 安裝並啟動後端：
-
-```bash
-npm run server:install
-npm run server:start
-```
-
-5. 修改 `js/firebase-config.js`：
-
-```js
-export const uploadMode = "api";
-export const apiBaseUrl = "http://localhost:3000";
-```
-
-6. 啟動前端：`npm run serve`
-
-### API 端點
-
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| GET | `/api/health` | 健康檢查 |
-| GET | `/api/diaries` | 取得近期日記 |
-| POST | `/api/diaries` | 新增日記 |
-
-POST 請求範例：
-
-```json
-{
-  "date_time": "2024-05-20T08:30",
-  "content": "我很感謝今天的陽光..."
-}
-```
-
-## Firebase 設定說明
-
-從 Firebase Console 取得網頁應用程式設定後，填入 `js/firebase-config.js`：
-
-| 欄位 | 說明 |
-|------|------|
-| apiKey | 網頁 API 金鑰 |
-| authDomain | 驗證網域 |
-| projectId | 專案 ID |
-| databaseURL | Realtime Database URL（需含區域，如 asia-southeast1） |
-
-首次使用請複製範本：
-
-```bash
-cp js/firebase-config.example.js js/firebase-config.js
-```
-
-## 部署建議
-
-- **前端**：Firebase Hosting、GitHub Pages、或任何靜態託管
-- **後端**：Google Cloud Run、Cloud Functions、或自有伺服器
-- 正式環境請收緊 Realtime Database 規則，並啟用 Firebase Authentication
+需啟用 JavaScript 與 Cookie（用於 Google 登入）。
 
 ## 授權
 

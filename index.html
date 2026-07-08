@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h2>✨ 6分鐘日記實踐</h2>
-        <p class="subtitle">紀錄當下的正向能量</p>
+        <p class="subtitle">紀錄當下的正向能量，同步至 Google 雲端資料庫</p>
         
         <form id="diaryForm">
             <div class="input-group">
@@ -26,73 +26,15 @@
         </form>
         
         <div id="statusMessage"></div>
+
+        <section class="diary-history">
+            <h3>近期日記</h3>
+            <div id="diaryList">
+                <p class="empty-hint">載入中...</p>
+            </div>
+        </section>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        // 你的 Firebase 配置 (已修正 databaseURL)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCIuY_INw6usMpftq_y62WGcpsPpnwKGgk",
-            authDomain: "sixmins-diary.firebaseapp.com",
-            projectId: "sixmins-diary",
-            storageBucket: "sixmins-diary.firebasestorage.app",
-            messagingSenderId: "854976818992",
-            appId: "1:854976818992:web:a7564dedc522d36256e2f5",
-            measurementId: "G-76WC8LJT3Y",
-            // 關鍵修正：必須指向 asia-southeast1
-            databaseURL: "https://sixmins-diary-default-rtdb.asia-southeast1.firebasedatabase.app"
-        };
-
-        // 初始化
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        const diaryForm = document.getElementById('diaryForm');
-        const dateInput = document.getElementById('datetime');
-        const statusMsg = document.getElementById('statusMessage');
-
-        // 自動填入現在時間
-        const updateNow = () => {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            dateInput.value = now.toISOString().slice(0, 16);
-        };
-        updateNow();
-
-        // 監聽提交
-        diaryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = "正在儲存到新加坡機房...";
-
-            const diaryData = {
-                date_time: dateInput.value,
-                content: document.getElementById('content').value,
-                created_at: new Date().toISOString()
-            };
-
-            try {
-                // 在資料庫中建立 'diaries' 資料夾並推入新資料
-                const diaryRef = ref(db, 'diaries');
-                const newEntryRef = push(diaryRef);
-                await set(newEntryRef, diaryData);
-
-                statusMsg.style.color = "#4a7c59";
-                statusMsg.innerHTML = "✅ 魔法已紀錄！請至 Firebase 查看。";
-                diaryForm.reset();
-                updateNow();
-            } catch (error) {
-                console.error(error);
-                statusMsg.style.color = "#d9534f";
-                statusMsg.innerHTML = "❌ 儲存失敗：" + error.message;
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "傳送至雲端儲存";
-            }
-        });
-    </script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

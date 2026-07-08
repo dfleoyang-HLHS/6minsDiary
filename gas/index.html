@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <div class="page">
+    <div id="loadingView" class="loading-overlay">
+      <p>正在連結你的 Google 雲端硬碟...</p>
+    </div>
+
+    <div id="mainApp" style="display:none">
+      <header class="app-header">
+        <div>
+          <h1>✨ 6分鐘魔法日記本</h1>
+          <p id="userInfo" class="user-info"></p>
+        </div>
+        <div class="header-right">
+          <a id="driveLink" href="#" target="_blank" rel="noopener noreferrer" class="drive-link">
+            開啟 6minsdiaries 資料夾
+          </a>
+        </div>
+      </header>
+
+      <div class="intro-card card">
+        <strong>今日三個書寫方向</strong>
+        <ul>
+          <li>① 感恩 — 寫下感謝的事</li>
+          <li>② 讓今天更棒 — 設定正面行動</li>
+          <li>③ 正向肯定 — 肯定自己與好事</li>
+        </ul>
+      </div>
+
+      <form id="diaryForm" class="card diary-form">
+        <div class="date-row">
+          <label for="diaryDate">日記日期</label>
+          <input type="date" id="diaryDate" required>
+          <span class="date-hint">每日一篇，同日期再次儲存將覆蓋更新</span>
+        </div>
+
+        <div class="prompt-card">
+          <label for="gratitude">
+            <span class="prompt-number">①</span>
+            <span class="prompt-title">感恩</span>
+            <span class="prompt-hint">寫下 3 件你今天感謝的事</span>
+          </label>
+          <textarea id="gratitude" rows="3" required placeholder="例：感謝家人的陪伴、感謝好天氣..."></textarea>
+        </div>
+
+        <div class="prompt-card">
+          <label for="great_day">
+            <span class="prompt-number">②</span>
+            <span class="prompt-title">讓今天更棒</span>
+            <span class="prompt-hint">今天可以怎麼做，讓這一天變得更好？</span>
+          </label>
+          <textarea id="great_day" rows="3" required placeholder="例：提早 10 分鐘出門、專心完成最重要的一件事..."></textarea>
+        </div>
+
+        <div class="prompt-card">
+          <label for="affirmation">
+            <span class="prompt-number">③</span>
+            <span class="prompt-title">正向肯定</span>
+            <span class="prompt-hint">寫下對自己的正向肯定或今天的好事</span>
+          </label>
+          <textarea id="affirmation" rows="3" required placeholder="例：我很有耐心、今天順利完成了會議..."></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary">儲存至我的 Google 雲端</button>
+        <p id="statusMessage" class="status-message" role="status"></p>
+      </form>
+
+      <section class="card diary-history">
+        <h2>近期日記</h2>
+        <div id="diaryList"><p class="empty-hint">載入中...</p></div>
+      </section>
+
+      <footer class="app-footer">
+        <p>資料儲存位置：你的 Google 雲端硬碟 → <strong>6minsdiaries</strong> 資料夾</p>
+        <p>無需 Google Cloud Console 或信用卡，由 Google Apps Script 安全存取你的個人雲端</p>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    var PROMPTS = ["gratitude", "great_day", "affirmation"];
+
+    function todayString() {
+      var d = new Date();
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1);
+      var day = String(d.getDate());
+      if (m.length < 2) m = "0" + m;
+      if (day.length < 2) day = "0" + day;
+      return y + "-" + m + "-" + day;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      var parts = dateStr.split("-");
+      return parts[0] + " 年 " + parseInt(parts[1], 10) + " 月 " + parseInt(parts[2], 10) + " 日";
+    }
+
+    function escapeHtml(text) {
+      var div = document.createElement("div");
+      div.textContent = text || "";
+      return div.innerHTML.replace(/\n/g, "<br>");
+    }
+
+    function showStatus(msg, type) {
+      var el = document.getElementById("statusMessage");
+      el.className = "status-message status-" + (type || "success");
+      el.textContent = msg;
+    }
+
+    function renderDiaryList(diaries) {
+      var container = document.getElementById("diaryList");
+      if (!diaries || !diaries.length) {
+        container.innerHTML = '<p class="empty-hint">尚無日記，寫下今天的第一篇吧！</p>';
+        return;
+      }
+
+      var html = "";
+      for (var i = 0; i < diaries.length; i++) {
+        var entry = diaries[i];
+        html += '<article class="diary-card">';
+        html += '<time>' + formatDate(entry.date) + '</time>';
+        html += '<div class="diary-section"><strong>① 感恩</strong><p>' + escapeHtml(entry.gratitude) + '</p></div>';
+        html += '<div class="diary-section"><strong>② 讓今天更棒</strong><p>' + escapeHtml(entry.great_day) + '</p></div>';
+        html += '<div class="diary-section"><strong>③ 正向肯定</strong><p>' + escapeHtml(entry.affirmation) + '</p></div>';
+        html += '</article>';
+      }
+      container.innerHTML = html;
+    }
+
+    function loadDiaries() {
+      document.getElementById("diaryList").innerHTML = '<p class="empty-hint">載入中...</p>';
+      google.script.run
+        .withSuccessHandler(renderDiaryList)
+        .withFailureHandler(function (err) {
+          document.getElementById("diaryList").innerHTML =
+            '<p class="empty-hint">無法載入日記：' + err.message + '</p>';
+        })
+        .listDiaries(14);
+    }
+
+    function initApp(userInfo) {
+      document.getElementById("loadingView").style.display = "none";
+      document.getElementById("mainApp").style.display = "block";
+
+      var emailText = userInfo.email
+        ? "已連結：" + userInfo.email
+        : "已連結個人 Google 雲端硬碟";
+      document.getElementById("userInfo").textContent = emailText;
+
+      if (userInfo.driveUrl) {
+        document.getElementById("driveLink").href = userInfo.driveUrl;
+      }
+
+      var dateInput = document.getElementById("diaryDate");
+      dateInput.value = todayString();
+      dateInput.max = todayString();
+
+      loadDiaries();
+    }
+
+    document.getElementById("diaryForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = "上傳至 Google 雲端...";
+
+      var data = {
+        date: document.getElementById("diaryDate").value,
+        gratitude: document.getElementById("gratitude").value,
+        great_day: document.getElementById("great_day").value,
+        affirmation: document.getElementById("affirmation").value
+      };
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          var action = result.updated ? "更新" : "新增";
+          showStatus("✅ 日記已" + action + "！檔案：6minsdiaries/" + result.fileName, "success");
+          btn.disabled = false;
+          btn.textContent = "儲存至我的 Google 雲端";
+          loadDiaries();
+        })
+        .withFailureHandler(function (err) {
+          showStatus("❌ 上傳失敗：" + err.message, "error");
+          btn.disabled = false;
+          btn.textContent = "儲存至我的 Google 雲端";
+        })
+        .saveDiary(data);
+    });
+
+    google.script.run
+      .withSuccessHandler(initApp)
+      .withFailureHandler(function (err) {
+        document.getElementById("loadingView").innerHTML =
+          '<p class="status-error">初始化失敗：' + err.message + '</p>' +
+          '<p>請確認已授權此應用程式存取 Google 雲端硬碟，並重新整理頁面。</p>';
+      })
+      .getUserInfo();
+  </script>
+</body>
+</html>

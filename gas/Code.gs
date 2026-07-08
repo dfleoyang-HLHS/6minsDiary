@@ -7,20 +7,21 @@ var DIARY_FOLDER_NAME = "6minsdiaries";
 
 /**
  * 提供網頁 UI
+ * 需要專案中有名為「index」的 HTML 檔案（見 gas/index.html）
  */
 function doGet() {
-  return HtmlService.createTemplateFromFile("index")
-    .evaluate()
+  return HtmlService.createHtmlOutputFromFile("index")
     .setTitle("6分鐘魔法日記本")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 /**
- * 引入 HTML 片段（樣式、腳本）
+ * 部署前測試：在編輯器選此函式 → 執行，確認 index 檔案存在
  */
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+function testDeployment() {
+  HtmlService.createHtmlOutputFromFile("index");
+  Logger.log("✅ index 檔案存在，可以部署");
 }
 
 /**

@@ -1,9 +1,9 @@
 /**
  * 6分鐘魔法日記本 — Google Apps Script 後端
- * 版本 2.3 — 每位使用者獨立日記（需正確部署設定）
+ * 版本 2.4 — 新增登入／登出與切換帳號
  */
 
-var SCRIPT_VERSION = "2.3";
+var SCRIPT_VERSION = "2.4";
 var DIARY_FOLDER_NAME = "6minsdiaries";
 var FOLDER_ID_KEY = "diaryFolderId";
 
@@ -141,7 +141,58 @@ function getDriveFolderUrl() {
 }
 
 /**
- * 取得目前登入的使用者資訊
+ * 取得應用程式網址與登出／切換帳號連結
+ */
+function getAppUrls() {
+  var appUrl = "";
+  try {
+    appUrl = ScriptApp.getService().getUrl();
+  } catch (e) {
+    appUrl = "";
+  }
+  var continueUrl = appUrl || "https://script.google.com";
+  return {
+    appUrl: appUrl,
+    logoutUrl: "https://accounts.google.com/Logout?continue=" + encodeURIComponent(continueUrl),
+    switchAccountUrl: "https://accounts.google.com/AccountChooser?continue=" + encodeURIComponent(continueUrl)
+  };
+}
+
+/**
+ * 登入：觸發 Google 授權並回傳使用者資訊
+ */
+function loginUser() {
+  var info = getUserInfo();
+  if (!info.email) {
+    throw new Error("無法取得 Google 帳號，請在授權視窗點選「允許」");
+  }
+  return info;
+}
+
+/**
+ * 取得目前登入的使用者資訊（不建立資料夾，僅查詢帳號）
+ */
+function checkLoginStatus() {
+  var email = "";
+  try {
+    email = Session.getEffectiveUser().getEmail();
+  } catch (e) {
+  }
+  if (!email) {
+    try {
+      email = Session.getActiveUser().getEmail();
+    } catch (e2) {
+    }
+  }
+  return {
+    version: SCRIPT_VERSION,
+    email: email,
+    loggedIn: Boolean(email)
+  };
+}
+
+/**
+ * 取得目前登入的使用者資訊（含雲端資料夾）
  */
 function getUserInfo() {
   var email = "";
@@ -160,6 +211,7 @@ function getUserInfo() {
     version: SCRIPT_VERSION,
     email: email,
     folderName: DIARY_FOLDER_NAME,
-    driveUrl: getDriveFolderUrl()
+    driveUrl: getDriveFolderUrl(),
+    urls: getAppUrls()
   };
 }

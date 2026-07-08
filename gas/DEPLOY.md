@@ -162,16 +162,16 @@
 1. 開啟 Apps Script 的 `Code.gs`
 2. **全選刪除**（Ctrl+A → Delete）
 3. 從本 repo 複製 **整份** `gas/Code.gs` 貼上
-4. 確認第 6 行有 `var SCRIPT_VERSION = "2.2";`
+4. 確認第 6 行有 `var SCRIPT_VERSION = "2.1";`
 5. 確認搜尋 `getFoldersByName` → **0 筆結果**
 6. **儲存**（Ctrl+S）
-7. 執行 `testDeployment` → 授權 → 日誌應顯示 `版本：2.2`
+7. 執行 `testDeployment` → 授權 → 日誌應顯示 `版本：2.1`
 8. **部署** → **管理部署作業** → 編輯 → **版本：新版本** → **部署**
 9. [移除舊授權](https://myaccount.google.com/permissions) → 重新開啟網址 → 再授權
 
 ### 成功標誌
 
-- 網頁頁尾顯示 **版本 2.2**
+- 網頁頁尾顯示 **版本 2.1**
 - 不再出現 `getFoldersByName` 錯誤
 - 可正常寫入日記
 
@@ -181,17 +181,6 @@
 新版 v2.1 改為 `DriveApp.createFolder()` + 記錄資料夾 ID，只需 drive.file 權限。
 
 若只更新了 `appsscript.json` 但 Code.gs 仍是舊版，授權後仍會失敗。
-
-### 錯誤：DriveApp.createFolder 需要 drive 權限
-
-訊息：`Specified permissions are not sufficient to call DriveApp.createFolder`
-
-**原因：** `appsscript.json` 使用了 `drive.file`，但建立資料夾需要完整 `drive` 權限。
-
-**解法：**
-1. 更新 `appsscript.json` 的 `oauthScopes` 為 `https://www.googleapis.com/auth/drive`（v2.2 已修正）
-2. 儲存 → 執行 `testDeployment` → **重新授權**
-3. [移除舊授權](https://myaccount.google.com/permissions) → 重新部署 → 再授權
 
 ### 其他原因
 
@@ -218,9 +207,71 @@
 
 ### 授權說明（會看到什麼）
 
-需要 **drive** 權限才能在使用者雲端硬碟建立 `6minsdiaries` 資料夾。
-`drive.file` 權限不足以呼叫 `DriveApp.createFolder`，請務必使用 v2.2 的 `appsscript.json`。
+新版只要求 **drive.file** 權限，意思是：
 
-授權畫面會要求存取 Google 雲端硬碟，這是建立日記資料夾所必需。
+> 僅能存取此應用程式建立或開啟的 Google 雲端硬碟檔案
+
+不會讀取你雲端硬碟的其他檔案，比完整 drive 權限更安全。
 
 ---
+
+---
+
+## 多位使用者：每人只看自己的日記
+
+程式已支援多使用者。使用者 A 與使用者 B 各自登入後，日記存在**各自 Google 雲端硬碟**的 `6minsdiaries` 資料夾，彼此看不到對方的內容。
+
+若「使用者 A 可以，使用者 B 不行」，通常是以下設定問題：
+
+### 檢查 1：部署的「執行身分」（最重要）
+
+**部署** → **管理部署作業** → 編輯，確認：
+
+| 項目 | 正確設定 | 錯誤設定（會導致共用或 B 無法使用） |
+|------|----------|-------------------------------------|
+| 執行身分 | **存取網頁應用程式的使用者** | ~~執行身分：我~~ |
+| 誰可以存取 | **所有已登入 Google 帳戶的使用者** | 僅自己 |
+
+若選「執行身分：我」，所有資料都會寫入**開發者帳號**的雲端硬碟，其他使用者無法正常使用自己的日記。
+
+### 檢查 2：OAuth 同意畫面（測試使用者）
+
+應用程式若還在 **測試模式**，只有被加入的測試使用者能授權：
+
+1. 在 Apps Script 點 **專案設定**（齒輪）
+2. 點 **Google Cloud Platform 專案** 底下的專案連結
+3. 左側選 **API 和服務** → **OAuth 同意畫面**
+4. 查看 **發布狀態**：
+
+| 狀態 | 誰能用 |
+|------|--------|
+| 測試中 | 只有「測試使用者」清單內的 Gmail |
+| 正式版 | 任何 Google 帳號 |
+
+**讓使用者 B 也能用（擇一）：**
+
+- **方式 A（測試階段）：** 在「測試使用者」加入 B 的 Gmail → 儲存
+- **方式 B（正式開放）：** 點「發布應用程式」送審（個人用途通常可通過）
+
+### 檢查 3：使用者 B 的瀏覽器登入
+
+1. 使用者 B 開啟**無痕視窗**（或登出 A 的帳號）
+2. 用 **B 的 Gmail** 登入 Google
+3. 開啟日記網址
+4. 完整走完授權 → **允許**
+5. 頁首應顯示：`目前登入：b@gmail.com（僅顯示此帳號的日記）`
+
+### 運作原理
+
+```
+使用者 A 開啟網址 → 以 A 身分執行 → A 的雲端硬碟/6minsdiaries/
+使用者 B 開啟網址 → 以 B 身分執行 → B 的雲端硬碟/6minsdiaries/
+```
+
+每位使用者的資料夾 ID 分開記錄，互不相通。
+
+### 成功標誌
+
+- 使用者 A 頁首顯示 A 的 email，雲端硬碟有 A 的日記
+- 使用者 B 頁首顯示 B 的 email，雲端硬碟有 B 的日記
+- A 看不到 B 的日記，B 也看不到 A 的

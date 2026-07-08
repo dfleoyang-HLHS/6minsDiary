@@ -1,9 +1,9 @@
 /**
  * 6分鐘魔法日記本 — Google Apps Script 後端
- * 版本 2.2 — 需 drive 權限以建立雲端硬碟資料夾
+ * 版本 2.3 — 每位使用者獨立日記（需正確部署設定）
  */
 
-var SCRIPT_VERSION = "2.2";
+var SCRIPT_VERSION = "2.3";
 var DIARY_FOLDER_NAME = "6minsdiaries";
 var FOLDER_ID_KEY = "diaryFolderId";
 
@@ -146,12 +146,12 @@ function getDriveFolderUrl() {
 function getUserInfo() {
   var email = "";
   try {
-    email = Session.getActiveUser().getEmail();
+    email = Session.getEffectiveUser().getEmail();
   } catch (e) {
   }
   if (!email) {
     try {
-      email = Session.getEffectiveUser().getEmail();
+      email = Session.getActiveUser().getEmail();
     } catch (e2) {
     }
   }

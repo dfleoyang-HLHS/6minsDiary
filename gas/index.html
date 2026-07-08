@@ -206,7 +206,7 @@
       document.getElementById("mainApp").style.display = "block";
 
       var emailText = userInfo.email
-        ? "已連結：" + userInfo.email
+        ? "目前登入：" + userInfo.email + "（僅顯示此帳號的日記）"
         : "已連結個人 Google 雲端硬碟";
       document.getElementById("userInfo").textContent = emailText;
 
@@ -218,7 +218,7 @@
         document.getElementById("versionInfo").textContent = "版本 " + userInfo.version;
       }
 
-      if (userInfo.version && userInfo.version !== "2.2") {
+      if (userInfo.version && userInfo.version !== "2.3") {
         showStatus("⚠️ 偵測到舊版程式（" + userInfo.version + "），請重新部署", "error");
       }
 

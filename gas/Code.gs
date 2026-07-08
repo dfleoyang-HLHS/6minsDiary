@@ -1,9 +1,9 @@
 /**
  * 6分鐘魔法日記本 — Google Apps Script 後端
- * 版本 2.1 — 不使用 getFoldersByName，僅需 drive.file 權限
+ * 版本 2.2 — 需 drive 權限以建立雲端硬碟資料夾
  */
 
-var SCRIPT_VERSION = "2.1";
+var SCRIPT_VERSION = "2.2";
 var DIARY_FOLDER_NAME = "6minsdiaries";
 var FOLDER_ID_KEY = "diaryFolderId";
 

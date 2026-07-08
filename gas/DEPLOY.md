@@ -162,16 +162,16 @@
 1. 開啟 Apps Script 的 `Code.gs`
 2. **全選刪除**（Ctrl+A → Delete）
 3. 從本 repo 複製 **整份** `gas/Code.gs` 貼上
-4. 確認第 6 行有 `var SCRIPT_VERSION = "2.1";`
+4. 確認第 6 行有 `var SCRIPT_VERSION = "2.2";`
 5. 確認搜尋 `getFoldersByName` → **0 筆結果**
 6. **儲存**（Ctrl+S）
-7. 執行 `testDeployment` → 授權 → 日誌應顯示 `版本：2.1`
+7. 執行 `testDeployment` → 授權 → 日誌應顯示 `版本：2.2`
 8. **部署** → **管理部署作業** → 編輯 → **版本：新版本** → **部署**
 9. [移除舊授權](https://myaccount.google.com/permissions) → 重新開啟網址 → 再授權
 
 ### 成功標誌
 
-- 網頁頁尾顯示 **版本 2.1**
+- 網頁頁尾顯示 **版本 2.2**
 - 不再出現 `getFoldersByName` 錯誤
 - 可正常寫入日記
 
@@ -181,6 +181,17 @@
 新版 v2.1 改為 `DriveApp.createFolder()` + 記錄資料夾 ID，只需 drive.file 權限。
 
 若只更新了 `appsscript.json` 但 Code.gs 仍是舊版，授權後仍會失敗。
+
+### 錯誤：DriveApp.createFolder 需要 drive 權限
+
+訊息：`Specified permissions are not sufficient to call DriveApp.createFolder`
+
+**原因：** `appsscript.json` 使用了 `drive.file`，但建立資料夾需要完整 `drive` 權限。
+
+**解法：**
+1. 更新 `appsscript.json` 的 `oauthScopes` 為 `https://www.googleapis.com/auth/drive`（v2.2 已修正）
+2. 儲存 → 執行 `testDeployment` → **重新授權**
+3. [移除舊授權](https://myaccount.google.com/permissions) → 重新部署 → 再授權
 
 ### 其他原因
 
@@ -207,10 +218,9 @@
 
 ### 授權說明（會看到什麼）
 
-新版只要求 **drive.file** 權限，意思是：
+需要 **drive** 權限才能在使用者雲端硬碟建立 `6minsdiaries` 資料夾。
+`drive.file` 權限不足以呼叫 `DriveApp.createFolder`，請務必使用 v2.2 的 `appsscript.json`。
 
-> 僅能存取此應用程式建立或開啟的 Google 雲端硬碟檔案
-
-不會讀取你雲端硬碟的其他檔案，比完整 drive 權限更安全。
+授權畫面會要求存取 Google 雲端硬碟，這是建立日記資料夾所必需。
 
 ---
